@@ -60,8 +60,8 @@ def _build_history_page(rows: list, page: int) -> tuple[str, object]:
         note     = row["note"] or "—"
         people   = f" · {len(shared)}ng" if not is_thu else ""
         lines.append(
-            f"{tx_label} | {date_str} | *{format_amount(row['amount'])}*\n"
-            f"   └ {note} · {row['payer_name']}{people}"
+            f"{tx_label} · {row['payer_name']} | {date_str} | *{format_amount(row['amount'])}*\n"
+            f"   └ {note}{people}\n"
         )
 
     # Nút điều hướng
