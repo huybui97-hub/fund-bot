@@ -26,6 +26,7 @@ from handlers.admin_flow import (
     THU_AMOUNT,
     THU_TOGGLE,
     backup,
+    import_csv,
     cmd_setgroup,
     reset_start,
     reset_confirm,
@@ -348,6 +349,12 @@ def main() -> None:
     app.add_handler(MessageHandler(
         filters.ChatType.GROUPS & (filters.PHOTO | filters.TEXT),
         handle_group_message,
+    ))
+
+    # --- Import CSV (Admin gửi file vào Inbox bot) ---
+    app.add_handler(MessageHandler(
+        filters.Document.FileExtension("csv") & filters.ChatType.PRIVATE,
+        import_csv,
     ))
 
     # --- Inline callbacks ---

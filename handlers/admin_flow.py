@@ -699,3 +699,76 @@ async def backup(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             document=InputFile(f, filename="backup.csv"),
             caption=f"💾 Backup {len(rows)} giao dịch.",
         )
+
+
+# ===========================================================================
+# IMPORT từ CSV backup
+# ===========================================================================
+
+async def import_csv(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Admin gửi file backup.csv vào Inbox bot → tự động import vào DB.
+    Bỏ qua các dòng đã tồn tại (dựa theo id).
+    """
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    doc = update.message.document
+    if not doc or not doc.file_name.endswith(".csv"):
+        return
+
+    await update.message.reply_text("⏳ Đang import dữ liệu...")
+
+    # Tải file về
+    file = await ctx.bot.get_file(doc.file_id)
+    import io, csv
+    buf = io.BytesIO()
+    await file.download_to_memory(buf)
+    buf.seek(0)
+    content = buf.read().decode("utf-8-sig")
+
+    reader = csv.DictReader(io.StringIO(content))
+    imported = skipped = 0
+
+    with db.get_conn() as conn:
+        existing_ids = {
+            row[0] for row in conn.execute("SELECT id FROM transactions").fetchall()
+        }
+
+        for row in reader:
+            try:
+                tx_id = int(row["id"])
+                if tx_id in existing_ids:
+                    skipped += 1
+                    continue
+
+                shared_by = json.dumps(
+                    [s.strip() for s in row["shared_by"].split(",") if s.strip()],
+                    ensure_ascii=False,
+                )
+                conn.execute(
+                    """
+                    INSERT INTO transactions (id, type, amount, note, payer_name, shared_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        tx_id,
+                        row["type"],
+                        int(row["amount"]),
+                        row.get("note", ""),
+                        row["payer_name"],
+                        shared_by,
+                        row["created_at"],
+                    ),
+                )
+                imported += 1
+            except Exception as e:
+                logger.warning("Bỏ qua dòng lỗi: %s — %s", row, e)
+
+    await update.message.reply_text(
+        f"✅ Import hoàn tất!\n"
+        f"📥 Đã nhập: *{imported}* giao dịch\n"
+        f"⏭️ Bỏ qua (trùng): *{skipped}* giao dịch",
+        parse_mode="Markdown",
+        reply_markup=main_menu(ADMIN_ID),
+    )
