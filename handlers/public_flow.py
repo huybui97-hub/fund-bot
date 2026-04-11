@@ -54,12 +54,13 @@ def _build_history_page(rows: list, page: int) -> tuple[str, object]:
     lines = [f"📜 *LỊCH SỬ GIAO DỊCH* — Trang {page + 1}/{total_pages}\n"]
     for row in chunk:
         shared   = json.loads(row["shared_by"])
-        tx_type  = "📥" if row["type"] == "thu" else "📤"
+        is_thu   = row["type"] == "thu"
+        tx_label = "🟢 THU" if is_thu else "🔴 CHI"
         date_str = row["created_at"][:10]
         note     = row["note"] or "—"
-        people   = f" · {len(shared)}ng" if row["type"] == "chi" else ""
+        people   = f" · {len(shared)}ng" if not is_thu else ""
         lines.append(
-            f"{tx_type} {date_str} *{format_amount(row['amount'])}*\n"
+            f"{tx_label} | {date_str} | *{format_amount(row['amount'])}*\n"
             f"   └ {note} · {row['payer_name']}{people}"
         )
 
