@@ -347,10 +347,15 @@ def main() -> None:
     app.add_handler(thu_conversation())
 
     # --- Reply keyboard — public ---
-    app.add_handler(MessageHandler(filters.Regex("^💰 Số Dư$"),   so_du))
-    app.add_handler(MessageHandler(filters.Regex("^📜 Lịch Sử$"), lich_su))
-    app.add_handler(MessageHandler(filters.Regex("^🔍 Tra Cứu$"), tra_cuu_start))
-    app.add_handler(MessageHandler(filters.Regex("^📊 Thống Kê$"),thong_ke))
+    app.add_handler(MessageHandler(filters.Regex("^💰 Số Dư$"),      so_du))
+    app.add_handler(MessageHandler(filters.Regex("^📜 Lịch Sử$"),    lich_su))
+    app.add_handler(MessageHandler(filters.Regex("^🔍 Tra Cứu$"),    tra_cuu_start))
+    app.add_handler(MessageHandler(filters.Regex("^📊 Thống Kê$"),   thong_ke))
+    app.add_handler(MessageHandler(filters.Regex("^📅 Lịch Trình$"), cmd_schedule))
+    app.add_handler(MessageHandler(
+        filters.TEXT & filters.Regex(r"(?i)lịch\s*trình"),
+        cmd_schedule,
+    ))
 
     # --- Reply keyboard — admin ---
     app.add_handler(MessageHandler(filters.Regex("^📋 Tổng Kết$"),tong_ket))

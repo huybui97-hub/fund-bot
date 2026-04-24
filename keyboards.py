@@ -17,6 +17,7 @@ def main_menu(user_id: int) -> ReplyKeyboardMarkup:
     base_buttons = [
         ["💰 Số Dư", "📜 Lịch Sử"],
         ["🔍 Tra Cứu", "📊 Thống Kê"],
+        ["📅 Lịch Trình"],
     ]
     admin_buttons = [
         ["📥 Nhập Thu", "📤 Nhập Chi"],
