@@ -55,6 +55,13 @@ from handlers.public_flow import (
     tra_cuu_member,
     tra_cuu_start,
 )
+from handlers.schedule_flow import (
+    cmd_schedule,
+    cmd_testremind,
+    handle_remind_approve,
+    handle_remind_skip,
+    schedule_reminders,
+)
 from keyboards import main_menu
 
 logging.basicConfig(
@@ -88,19 +95,18 @@ COMMANDS_ADMIN = COMMANDS_PUBLIC + [
 ]
 
 
-async def setup_commands(app: Application) -> None:
-    """Chạy 1 lần lúc bot khởi động — thiết lập menu '/' trên Telegram."""
-    # Tất cả người dùng (chat riêng)
+async def post_init(app: Application) -> None:
+    """Chạy 1 lần lúc bot khởi động."""
     await app.bot.set_my_commands(
         commands=COMMANDS_PUBLIC,
         scope=BotCommandScopeAllPrivateChats(),
     )
-    # Admin thấy thêm lệnh quản trị
     await app.bot.set_my_commands(
         commands=COMMANDS_ADMIN,
         scope=BotCommandScopeChat(chat_id=ADMIN_ID),
     )
     logger.info("Menu lệnh '/' đã được thiết lập trên Telegram.")
+    schedule_reminders(app)
 
 
 # ---------------------------------------------------------------------------
@@ -169,12 +175,15 @@ async def cmd_help(update: Update, ctx) -> None:
     if is_group:
         keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("💰 Số Dư",    callback_data="cmd_balance"),
-                InlineKeyboardButton("📜 Lịch Sử",  callback_data="cmd_history"),
+                InlineKeyboardButton("💰 Số Dư",      callback_data="cmd_balance"),
+                InlineKeyboardButton("📜 Lịch Sử",    callback_data="cmd_history"),
             ],
             [
-                InlineKeyboardButton("📊 Thống Kê", callback_data="cmd_thongke"),
-                InlineKeyboardButton("🔍 Tra Cứu",  callback_data="cmd_tracuu"),
+                InlineKeyboardButton("📊 Thống Kê",   callback_data="cmd_thongke"),
+                InlineKeyboardButton("🔍 Tra Cứu",    callback_data="cmd_tracuu"),
+            ],
+            [
+                InlineKeyboardButton("📅 Lịch Trình", callback_data="cmd_schedule"),
             ],
         ])
         sent = await update.effective_message.reply_text(
@@ -204,7 +213,7 @@ async def cmd_help(update: Update, ctx) -> None:
 async def cmd_start(update: Update, ctx) -> None:
     user = update.effective_user
     await update.message.reply_text(
-        f"👋 Xin chào *{user.first_name}*!\n\nChọn chức năng bên dưới:",
+        "Chọn chức năng bên dưới:",
         parse_mode="Markdown",
         reply_markup=main_menu(user.id),
     )
@@ -230,6 +239,13 @@ async def callback_router(update: Update, ctx) -> None:
     elif data == "cmd_tracuu":
         await query.answer()
         await tra_cuu_start(update, ctx)
+    elif data == "cmd_schedule":
+        await query.answer()
+        await cmd_schedule(update, ctx)
+    elif data.startswith("remind_ok:"):
+        await handle_remind_approve(update, ctx)
+    elif data == "remind_skip":
+        await handle_remind_skip(update, ctx)
     elif data.startswith("hist:"):
         await lich_su_page(update, ctx)
     elif data.startswith("lookup:"):
@@ -310,7 +326,7 @@ def main() -> None:
     app = (
         Application.builder()
         .token(BOT_TOKEN)
-        .post_init(setup_commands)   # Thiết lập menu "/" khi khởi động
+        .post_init(post_init)
         .build()
     )
 
@@ -323,7 +339,8 @@ def main() -> None:
     app.add_handler(CommandHandler("history", lich_su))
     app.add_handler(CommandHandler("thongke", thong_ke))
     app.add_handler(CommandHandler("tracuu",  tra_cuu_start))
-    app.add_handler(CommandHandler("summary", tong_ket))
+    app.add_handler(CommandHandler("summary",    tong_ket))
+    app.add_handler(CommandHandler("testremind", cmd_testremind))
 
     # --- Conversations (đăng ký TRƯỚC MessageHandler thông thường) ---
     app.add_handler(chi_conversation())
